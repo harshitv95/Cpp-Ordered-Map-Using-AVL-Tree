@@ -1,5 +1,6 @@
 #include <iostream>
 #include <functional>
+#include <queue>
 
 using namespace std;
 
@@ -13,6 +14,8 @@ public:
     BST();
 
     BST(std::function<Data_T()> default_initializer);
+
+    BST(const BST<Data_T> &copyFrom);
 
     bool empty() const;
 
@@ -46,8 +49,11 @@ protected:
 
     /***** Node class *****/
     class BinNode {
-    private:
+    protected:
         Data_T data;
+
+        virtual void cloneFrom(const BinNode *tree);
+
     public:
         BinNode *left;
         BinNode *right;
@@ -59,13 +65,17 @@ protected:
 
         // Explicit Value -- data part contains item; both links are null.
         BinNode(Data_T item)
-                : data(item), left(0), right(0) {}
+                : data(item), left(nullptr), right(nullptr) {}
+
+        BinNode(const BinNode &node) : data(node.data), left(nullptr), right(nullptr) {}
 
         virtual void print();
 
         Data_T &getData() {
             return this->data;
         }
+
+        static void deleteSubTree(BinNode *node);
 
     };// end of class BinNode declaration
 
@@ -88,6 +98,8 @@ protected:
 
     virtual BinNode *initNode(const Data_T &data);
 
+    virtual BinNode *initNode(const BinNode &data);
+
     BinNode *smallest(BinNode *rootNode, BinNode *&parentNode, int &status);
 
     BinNode *largest(BinNode *rootNode, BinNode *&parentNode, int &status);
@@ -95,6 +107,10 @@ protected:
     BinNode *smallest(BinNode *rootNode);
 
     BinNode *largest(BinNode *rootNode);
+
+    virtual void cloneFrom(const BST<Data_T> *tree);
+
+    virtual BinNode *cloneFrom(const BinNode *node);
 
 private:
     /***** Private Function Members *****/
@@ -111,7 +127,7 @@ private:
 #endif
 
 
-//--- Definition of constructor
+//--- Definition of constructors
 template<typename Data_T>
 BST<Data_T>::BST()
         : myRoot(0) {}
@@ -121,7 +137,27 @@ BST<Data_T>::BST(function<Data_T()> default_init)
         : myRoot(0), default_init(default_init) {}
 
 template<typename Data_T>
-bool BST<Data_T>::empty() const { return myRoot == 0; }
+BST<Data_T>::BST(const BST<Data_T> &copyFrom) {
+    cloneFrom(copyFrom);
+}
+
+template<typename Data_T>
+void BST<Data_T>::cloneFrom(const BST<Data_T> *tree) {
+    BinNode::deleteSubTree(this->myRoot);
+    this->myRoot = cloneFrom(tree->myRoot);
+}
+
+template<typename Data_T>
+typename BST<Data_T>::BinNode *BST<Data_T>::cloneFrom(const BinNode *node) {
+    if (!node) return nullptr;
+    BinNode *retNode = initNode(*node);
+    retNode->left = cloneFrom(node->left);
+    retNode->right = cloneFrom(node->right);
+    return retNode;
+}
+
+template<typename Data_T>
+bool BST<Data_T>::empty() const { return !myRoot; }
 
 template<typename Data_T>
 Data_T *BST<Data_T>::search(const Data_T &item) const {
@@ -243,11 +279,6 @@ BST<Data_T>::searchNode(BST<Data_T>::BinNode *startNode, const Data_T &data, BST
         }
     }
     return nullptr;
-}
-
-template<typename Data_T>
-void BST<Data_T>::BinNode::print() {
-    cout << this->getData() << endl;
 }
 
 template<typename Data_T>
@@ -375,12 +406,40 @@ void BST<Data_T>::postInsert(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *p
 template<typename Data_T>
 void BST<Data_T>::postDelete(Data_T data, BST<Data_T>::BinNode *parentNode) {}
 
-//template<typename Data_T>
-//BST<Data_T>::BinNode *BST<Data_T>::initNode() {
-//    return new BinNode();
-//}
-
 template<typename Data_T>
 typename BST<Data_T>::BinNode *BST<Data_T>::initNode(const Data_T &data) {
     return new BinNode(data);
+}
+
+template<typename Data_T>
+typename BST<Data_T>::BinNode *BST<Data_T>::initNode(const BinNode &data) {
+    return new BinNode(data);
+}
+
+// BinNode impl:
+template<typename Data_T>
+void BST<Data_T>::BinNode::print() {
+    cout << this->getData() << endl;
+}
+
+template<typename Data_T>
+void BST<Data_T>::BinNode::cloneFrom(const BinNode *node) {
+    this->data = node->data;
+    this->left->cloneFrom(node->left);
+    this->right->cloneFrom(node->right);
+}
+
+template<typename Data_T>
+void BST<Data_T>::BinNode::deleteSubTree(BinNode *node) {
+    queue < BinNode * * > q;
+    q.push(&node);
+    while (!q.empty()) {
+        if ((*q.front())->left)
+            q.push(&(*q.front())->left);
+        if ((*q.front())->right)
+            q.push(&(*q.front())->right);
+        delete *(q.front());
+        *(q.front()) = nullptr;
+        q.pop();
+    }
 }

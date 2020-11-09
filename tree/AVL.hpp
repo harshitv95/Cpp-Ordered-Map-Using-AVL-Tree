@@ -39,7 +39,7 @@ protected:
 
 //        AVLNode() : BST::BinNode(), height(0), balance(0) {}
 
-        AVLNode(Data_T data) : BST::BinNode(data), height(0), balance(0) {}
+        AVLNode(Data_T data) : BST<Data_T>::BinNode(data), height(0), balance(0) {}
 
         void print();
     };
