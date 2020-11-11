@@ -64,10 +64,12 @@ protected:
 //                : left(0), right(0) {}
 
         // Explicit Value -- data part contains item; both links are null.
-        BinNode(Data_T item)
+        BinNode(const Data_T &item)
                 : data(item), left(nullptr), right(nullptr) {}
 
         BinNode(const BinNode &node) : data(node.data), left(nullptr), right(nullptr) {}
+
+        virtual ~BinNode() {}
 
         virtual void print();
 
@@ -90,9 +92,9 @@ protected:
     BinNode *myRoot;
 
     /***** Protected Function Members *****/
-    virtual void postInsert(BinNode *node, BinNode *parentNode);
+    virtual void postInsert(const BinNode *node, const BinNode *parentNode);
 
-    virtual void postDelete(Data_T deletedData, BinNode *parentNode);
+    virtual void postDelete(const Data_T &deletedData, const BinNode *parentNode);
 
 //    virtual BinNode *initNode();
 
@@ -401,10 +403,10 @@ typename BST<Data_T>::BinNode *BST<Data_T>::largest(BinNode *rootNode) {
 }
 
 template<typename Data_T>
-void BST<Data_T>::postInsert(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *parentNode) {}
+void BST<Data_T>::postInsert(const BST<Data_T>::BinNode *node, const BST<Data_T>::BinNode *parentNode) {}
 
 template<typename Data_T>
-void BST<Data_T>::postDelete(Data_T data, BST<Data_T>::BinNode *parentNode) {}
+void BST<Data_T>::postDelete(const Data_T &data, const BST<Data_T>::BinNode *parentNode) {}
 
 template<typename Data_T>
 typename BST<Data_T>::BinNode *BST<Data_T>::initNode(const Data_T &data) {
@@ -419,7 +421,7 @@ typename BST<Data_T>::BinNode *BST<Data_T>::initNode(const BinNode &data) {
 // BinNode impl:
 template<typename Data_T>
 void BST<Data_T>::BinNode::print() {
-    cout << this->getData() << endl;
+//    cout << this->getData() << endl;
 }
 
 template<typename Data_T>

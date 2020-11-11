@@ -12,7 +12,7 @@ using namespace std;
 #include "BST.hpp"
 
 template<typename Data_T>
-class AVL<Data_T> : public BST<Data_T> {
+class AVL : public BST<Data_T> {
 public:
     /***** Function Members *****/
     AVL();
@@ -39,7 +39,9 @@ protected:
 
 //        AVLNode() : BST::BinNode(), height(0), balance(0) {}
 
-        AVLNode(Data_T data) : BST<Data_T>::BinNode(data), height(0), balance(0) {}
+        AVLNode(const Data_T &data) : BST<Data_T>::BinNode(data), height(0), balance(0) {}
+
+        AVLNode(const typename BST<Data_T>::BinNode &node) : BST<Data_T>::BinNode(node), height(0), balance(0) {}
 
         void print();
     };
@@ -50,11 +52,16 @@ protected:
 
     AVLNode *findUnbalanced(AVLNode *rootNode);
 
+    void postInsert(const typename BST<Data_T>::BinNode *, const typename BST<Data_T>::BinNode *);
+
+    void postDelete(const Data_T &data, const typename BST<Data_T>::BinNode *parentNode);
+
+    AVLNode *initNode(const Data_T &data);
+
+    AVLNode *initNode(const typename BST<Data_T>::BinNode &data);
+
 private:
     /***** Private Function Members *****/
-    void postInsert(BinNode *node, BinNode *parentNode);
-
-    void postDelete(BinNode *parentNode);
 
     void balance(AVLNode *node);
 
@@ -74,19 +81,19 @@ AVL<Data_T>::AVL(std::function<Data_T()> default_initializer) : BST<Data_T>(defa
 // Private methods
 template<typename Data_T>
 void AVL<Data_T>::AVLNode::print() {
-    cout << this->data
-         << " (height: " << this->height
-         << ", balance: " << this->balance
-         << ", " << (
-                 this->childType == ROOT_NODE ? "ROOT" : (
-                         this->childType == LEFT_NODE ? "LEFT" : "RIGHT"
-                 ))
-         << " child of: " << (!this->parent ? -999 : this->parent->data)
-         << ")" << endl;
+//    cout << this->data
+//         << " (height: " << this->height
+//         << ", balance: " << this->balance
+//         << ", " << (
+//                 this->childType == ROOT_NODE ? "ROOT" : (
+//                         this->childType == LEFT_NODE ? "LEFT" : "RIGHT"
+//                 ))
+//         << " child of: " << (!this->parent ? -999 : this->parent->data)
+//         << ")" << endl;
 }
 
 template<typename Data_T>
-void AVL<Data_T>::postInsert(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *parentNode) {
+void AVL<Data_T>::postInsert(const typename BST<Data_T>::BinNode *node, const typename BST<Data_T>::BinNode *parentNode) {
     AVLNode *avlNode = ((AVLNode *) node);
     avlNode->parent = ((AVLNode *) parentNode);
 
@@ -139,7 +146,7 @@ void AVL<Data_T>::postInsert(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *p
 //}
 
 template<typename Data_T>
-void AVL<Data_T>::postDelete(BST<Data_T>::BinNode *parentNode) {
+void AVL<Data_T>::postDelete(const Data_T &data, const typename BST<Data_T>::BinNode *parentNode) {
     this->calcHeight((AVLNode *) this->myRoot);
     if (!parentNode)
         return;
@@ -164,7 +171,7 @@ void AVL<Data_T>::postDelete(BST<Data_T>::BinNode *parentNode) {
 }
 
 template<typename Data_T>
-AVL<Data_T>::AVLNode *AVL<Data_T>::findUnbalanced(AVL<Data_T>::AVLNode *rootNode) {
+typename AVL<Data_T>::AVLNode *AVL<Data_T>::findUnbalanced(AVL<Data_T>::AVLNode *rootNode) {
     if (!rootNode || !IS_BALANCED(rootNode))
         return rootNode;
     AVLNode *unbalanced;
@@ -176,11 +183,20 @@ AVL<Data_T>::AVLNode *AVL<Data_T>::findUnbalanced(AVL<Data_T>::AVLNode *rootNode
 }
 
 template<typename Data_T>
-AVL<Data_T>::BinNode *AVL<Data_T>::initNode(Data_T data) {
-    AVLNode node = new AVLNode(data);
-    node.left = NULL;
-    node.right = NULL;
-    node.parent = NULL;
+typename AVL<Data_T>::AVLNode *AVL<Data_T>::initNode(const Data_T &data) {
+    AVLNode *node = new AVLNode(data);
+    node->left = nullptr;
+    node->right = nullptr;
+    node->parent = nullptr;
+    return node;
+}
+
+template<typename Data_T>
+typename AVL<Data_T>::AVLNode *AVL<Data_T>::initNode(const typename BST<Data_T>::BinNode &data) {
+    AVLNode *node = new AVLNode(data);
+    node->left = nullptr;
+    node->right = nullptr;
+    node->parent = nullptr;
     return node;
 }
 
@@ -200,6 +216,7 @@ int AVL<Data_T>::calcBalance(AVLNode *node) {
         node->balance = -1 - ((AVLNode *) node->right)->height;
     else
         node->balance = ((AVLNode *) node->left)->height + 1;
+    return node->balance;
 }
 
 template<typename Data_T>
@@ -253,7 +270,7 @@ void AVL<Data_T>::balance(AVLNode *node) {
                     rotateNode = parent;
                 }
             }
-            cout << "Rotating [" << rotateNode->data << "]" << endl;
+//            cout << "Rotating [" << rotateNode->data << "]" << endl;
             this->rotate(rotateNode, rotationType);
             this->calcHeight((AVLNode *) this->myRoot);
             return;
