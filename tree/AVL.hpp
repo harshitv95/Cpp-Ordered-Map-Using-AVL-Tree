@@ -67,6 +67,56 @@ private:
 
     void rotate(AVLNode *rotateNode, rotation_type rotationType);
 
+
+public:
+    class
+    Iterator : public BST<Data_T>::Iterator {
+    public:
+        Iterator(typename BST<Data_T>::BinNode *node) : BST<Data_T>::Iterator(node) {}
+
+        // Copy constr
+        Iterator(const Iterator &it) : BST<Data_T>::Iterator(it) {}
+
+        Data_T &prev() {
+            bool found = 0;
+            if (this->st.top()->left) {
+                this->st.push(this->st.top());
+                found = true;
+            } else {
+                AVL::AVLNode *node = (AVL::AVLNode *) this->st.top();
+                while (
+                        node->childType == LEFT_NODE
+                        ) {
+                    node = node->parent;
+                }
+                if (node->childType == LEFT_NODE) {
+                    found = true;
+                    this->st.push(node->parent);
+                }
+            }
+
+            if (!found)
+                throw std::out_of_range("Tree Iterator reached first, cannot get previous");
+            this->BST<Data_T>::BinNode::data = this->st.top()->getData();
+            return this->st.top()->getData();
+        }
+    };
+
+    virtual typename BST<Data_T>::Iterator begin() override {
+        AVL<Data_T>::Iterator it(this->myRoot);
+        return it;
+    }
+
+    virtual typename BST<Data_T>::Iterator begin(Data_T &data) override {
+        typename BST<Data_T>::BinNode *parent = nullptr, *node = this->searchNode(this->myRoot, data, parent);
+        if (!node) throw std::out_of_range("could not instantiate Iterator, data not found in tree");
+        return AVL<Data_T>::Iterator(node);
+    }
+
+    virtual typename BST<Data_T>::Iterator end() override {
+        return AVL<Data_T>::Iterator(this->largestNode);
+    }
+
 }; // end of class declaration
 
 #endif
@@ -93,7 +143,8 @@ void AVL<Data_T>::AVLNode::print() {
 }
 
 template<typename Data_T>
-void AVL<Data_T>::postInsert(const typename BST<Data_T>::BinNode *node, const typename BST<Data_T>::BinNode *parentNode) {
+void
+AVL<Data_T>::postInsert(const typename BST<Data_T>::BinNode *node, const typename BST<Data_T>::BinNode *parentNode) {
     AVLNode *avlNode = ((AVLNode *) node);
     avlNode->parent = ((AVLNode *) parentNode);
 
