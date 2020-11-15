@@ -88,12 +88,12 @@ protected:
             return this->data;
         }
 
-        static void deleteSubTree(BinNode *node);
+        static void deleteSubTree(BinNode *&node);
 
     };// end of class BinNode declaration
 
     /***** Data Members *****/
-    BinNode *myRoot, *smallestNode = nullptr, *largestNode = nullptr;
+    BinNode *myRoot = nullptr, *smallestNode = nullptr, *largestNode = nullptr;
 
     /***** Protected Function Members *****/
     BinNode *searchNode(BinNode *startNode, const Data_T &data, BinNode *&parentNode);
@@ -148,8 +148,8 @@ public:
     public:
         Iterator(BST<Data_T>::BinNode *node, const BST<Data_T> *tree) : tree(tree) {
             st.push(nullptr);
-            if (node) init(node);
-            std::cout << "Iterator Got root: " << tree->myRoot->getData().first;
+            if (node) init(tree->myRoot);
+//            std::cout << "Iterator Got root: " << tree->myRoot->getData().first << std::endl;
             while (node != this->st.top())
                 next();
         }
@@ -241,6 +241,8 @@ template<typename Data_T>
 void BST<Data_T>::cloneFrom(const BST<Data_T> *tree) {
     BinNode::deleteSubTree(this->myRoot);
     this->myRoot = cloneFrom(tree->myRoot);
+    this->smallestNode = this->smallest(myRoot);
+    this->largestNode = this->largest(myRoot);
 }
 
 template<typename Data_T>
@@ -346,7 +348,7 @@ void BST<Data_T>::postOrder() const {
 template<typename Data_T>
 void BST<Data_T>::deleteNode(const Data_T &value) {
     BinNode *searchNode, *parentNode;
-    parentNode = NULL;
+    parentNode = nullptr;
     delete_mode mode = LEAF_NODE;
     searchNode = this->searchNode(this->myRoot, value, parentNode);
     if (searchNode->left && searchNode->right)
@@ -368,7 +370,7 @@ void BST<Data_T>::deleteNode(
         const std::function<short int(const DataSearch_T &, Data_T &)> &comp
 ) {
     BinNode *searchNode, *parentNode;
-    parentNode = NULL;
+    parentNode = nullptr;
     delete_mode mode = LEAF_NODE;
     searchNode = this->searchNode(this->myRoot, item, comp, parentNode);
     if (searchNode->left && searchNode->right)
@@ -382,7 +384,7 @@ void BST<Data_T>::deleteNode(
 // Private methods
 template<typename Data_T>
 int BST<Data_T>::nodeCount(BST<Data_T>::BinNode *node) const {
-    if (node == NULL || node == 0)
+    if (!node)
         return 0;
     return 1 + this->nodeCount(node->left) + this->nodeCount(node->right);
 }
@@ -431,7 +433,7 @@ typename BST<Data_T>::BinNode *BST<Data_T>::searchNode(
 
 template<typename Data_T>
 void BST<Data_T>::traverse(BST<Data_T>::BinNode *node, traversal_order order) const {
-    if (node == NULL || node == 0)
+    if (!node)
         return;
     BinNode *left = node->left;
     BinNode *right = node->right;
@@ -467,14 +469,14 @@ BST<Data_T>::deleteNode(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *parent
         case LEAF_NODE: {
 //            cout << "Deleting Leaf Node " << node->getData() << endl;
             if (isRoot)
-                this->myRoot = NULL;
+                this->myRoot = nullptr;
             else {
                 if (parentNode->left == node) {
 //                    cout << "Deleting left child of parent: " << parentNode->getData() << endl;
-                    parentNode->left = NULL;
+                    parentNode->left = nullptr;
                 } else if (parentNode->right == node) {
 //                    cout << "Deleting right child of parent: " << parentNode->getData() << endl;
-                    parentNode->right = NULL;
+                    parentNode->right = nullptr;
                 }
             }
             break;
@@ -495,7 +497,7 @@ BST<Data_T>::deleteNode(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *parent
             int status = 0;
             BinNode *parentOfSmallestNode, *smallestNode;
             smallestNode = smallest(node->right, parentOfSmallestNode, status);
-            if (parentOfSmallestNode != NULL && status == 1)
+            if (parentOfSmallestNode && (status == 1))
                 parentOfSmallestNode->left = smallestNode->right;
             else
                 node->right = smallestNode->right;
@@ -546,8 +548,6 @@ typename BST<Data_T>::BinNode *BST<Data_T>::smallest(BinNode *rootNode) {
     while (rootNode && rootNode->left)
         rootNode = rootNode->left;
     return rootNode;
-    if (rootNode->left == NULL) return rootNode;
-    return smallest(rootNode->left);
 }
 
 template<typename Data_T>
@@ -587,7 +587,7 @@ void BST<Data_T>::BinNode::cloneFrom(const BinNode *node) {
 }
 
 template<typename Data_T>
-void BST<Data_T>::BinNode::deleteSubTree(BinNode *node) {
+void BST<Data_T>::BinNode::deleteSubTree(BinNode *&node) {
     if (!node) return;
     std::queue < BinNode * * > q;
     q.push(&node);

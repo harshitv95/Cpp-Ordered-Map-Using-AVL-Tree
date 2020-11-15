@@ -61,10 +61,10 @@ protected:
     AVLNode *initNode(const Data_T &data);
 
     AVLNode *initNode(const typename BST<Data_T>::BinNode &data);
-    
-    virtual void cloneFrom(const BST<Data_T> *tree);
 
-    virtual BinNode *cloneFrom(const BinNode *node);
+    void cloneFrom(const BST<Data_T> *tree);
+
+    AVLNode *cloneFrom(const typename BST<Data_T>::BinNode *node);
 
 private:
     /***** Private Function Members *****/
@@ -139,7 +139,9 @@ public:
 
 //--- Definition of constructor
 template<typename Data_T>
-AVL<Data_T>::AVL(const AVL<Data_T> &tree) : BST<Data_T>(tree) {}
+AVL<Data_T>::AVL(const AVL<Data_T> &tree) : BST<Data_T>(tree.updateIfExists) {
+    cloneFrom(&tree);
+}
 
 template<typename Data_T>
 AVL<Data_T>::AVL(bool updateIfExists) : BST<Data_T>(updateIfExists) {}
@@ -270,6 +272,32 @@ typename AVL<Data_T>::AVLNode *AVL<Data_T>::initNode(const typename BST<Data_T>:
     return node;
 }
 
+template<typename Data_T>
+void AVL<Data_T>::cloneFrom(const BST<Data_T> *tree) {
+    this->BST<Data_T>::cloneFrom(tree);
+    ((AVLNode *) this->myRoot)->childType = ROOT_NODE;
+    this->calcHeight((AVLNode *) this->myRoot);
+}
+
+template<typename Data_T>
+typename AVL<Data_T>::AVLNode *AVL<Data_T>::cloneFrom(const typename BST<Data_T>::BinNode *node) {
+    if (!node) return nullptr;
+    AVLNode *retNode = initNode(*node);
+
+    retNode->left = cloneFrom(node->left);
+    if (retNode->left) {
+        ((AVLNode *) retNode->left)->parent = retNode;
+        ((AVLNode *) retNode->left)->childType = LEFT_NODE;
+    }
+
+    retNode->right = cloneFrom(node->right);
+    if (retNode->right) {
+        ((AVLNode *) retNode->right)->parent = retNode;
+        ((AVLNode *) retNode->right)->childType = RIGHT_NODE;
+    }
+    return retNode;
+}
+
 static int max(int a, int b) {
     return a > b ? a : b;
 }
@@ -291,8 +319,8 @@ int AVL<Data_T>::calcBalance(AVLNode *node) {
 
 template<typename Data_T>
 int AVL<Data_T>::calcHeight(AVLNode *node) {
-    if (node == NULL) return -1;
-    ((AVLNode *) node)->parent = NULL;
+    if (!node) return -1;
+    ((AVLNode *) node)->parent = nullptr;
     ((AVLNode *) node)->childType = ROOT_NODE;
 
     int leftHeight = calcHeight((AVLNode *) node->left);
@@ -355,7 +383,7 @@ void AVL<Data_T>::rotate(AVLNode *rotateNode, rotation_type rotationType) {
     if (!rotateNode || !rotateNode->parent || rotateNode->childType == ROOT_NODE)
         return;
     bool isRoot;
-    AVLNode *parentOfRotated = NULL, *rotated;
+    AVLNode *parentOfRotated = nullptr, *rotated;
     rotated = rotateNode->parent;
     isRoot = rotated->childType == ROOT_NODE;
     parentOfRotated = rotated->parent;
@@ -381,7 +409,7 @@ void AVL<Data_T>::rotate(AVLNode *rotateNode, rotation_type rotationType) {
         }
     }
 
-    if (isRoot || parentOfRotated == NULL) // Is parent Root
+    if (isRoot || !parentOfRotated) // Is parent Root
         this->myRoot = rotateNode;
     else {
         if (rotated->childType == LEFT_NODE) {

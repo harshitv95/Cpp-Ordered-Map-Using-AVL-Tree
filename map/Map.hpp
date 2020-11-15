@@ -29,6 +29,14 @@ protected:
         Mapped_T &getMappedItem() {
             return this->second;
         }
+
+//        bool operator<(const MapDataNode &node) const {
+//            return this->first < node.first || (this->first == node.first && this->second < node.second);
+//        }
+//
+//        bool operator==(const MapDataNode &node) const {
+//            return key == node.first;
+//        }
     };
 
     class MapKeyNode {
@@ -126,6 +134,10 @@ protected:
 
     };
 
+    class ConstIterator : public Iterator {
+
+    };
+
     AVL<MapDataNode> tree;
 
     MapDataNode *get_data_node(const Key_T &) const;
@@ -160,6 +172,8 @@ public:
     Mapped_T &at(const Key_T &);
 
     const Mapped_T &at(const Key_T &) const;
+
+    Iterator find(const Key_T &);
 
     Mapped_T &operator[](const Key_T &key);
 
@@ -244,6 +258,12 @@ const Mapped_T &Map<Key_T, Mapped_T>::at(const Key_T &key) const {
     if (!node)
         throw std::out_of_range("specified key does not exist");
     return node->getMappedItem();
+}
+
+template<typename Key_T, typename Mapped_T>
+typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::find(const Key_T &key) {
+    const MapDataNode *node = this->get_data_node(key);
+    return node ? begin(&node) : end();
 }
 
 // -- modifiers:
