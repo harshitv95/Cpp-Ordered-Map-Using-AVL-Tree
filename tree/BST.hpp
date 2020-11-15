@@ -3,8 +3,6 @@
 #include <queue>
 #include <stack>
 
-using namespace std;
-
 #ifndef BINARY_SEARCH_TREE
 #define BINARY_SEARCH_TREE
 
@@ -12,11 +10,15 @@ template<typename Data_T>
 class BST {
 public:
     /***** Function Members *****/
-    BST();
+    BST() : BST(true) {}
 
-    BST(std::function<Data_T()> default_initializer);
+    BST(bool updateIfExists);
+
+//    BST(const std::function<Data_T()> &default_initializer);
 
     BST(const BST<Data_T> &copyFrom);
+
+    BST(const BST<Data_T> *copyFrom);
 
     bool empty() const;
 
@@ -38,6 +40,8 @@ public:
 
     void deleteNode(const Data_T &value);
 
+    void clear();
+
     template<typename DataSearch_T>
     void deleteNode(const DataSearch_T &item, const std::function<short int(const DataSearch_T &, Data_T &)> &comp);
 
@@ -49,12 +53,13 @@ public:
         LEAF_NODE, ONE_CHILD, TWO_CHILDREN
     } delete_mode;
 
+    BST<Data_T> &operator=(const BST<Data_T> &tree) {
+        return BST<Data_T>(tree);
+    }
 
 protected:
+    const bool updateIfExists;
     std::function<Data_T()> default_init;
-
-//    Data_T *search(const Data_T &item, Data_T *&parent) const;
-
 
     /***** Node class *****/
     class BinNode {
@@ -66,11 +71,6 @@ protected:
     public:
         BinNode *left;
         BinNode *right;
-
-        // BinNode constructors
-        // Default -- data part is default int value; both links are null.
-//        BinNode()
-//                : left(0), right(0) {}
 
         // Explicit Value -- data part contains item; both links are null.
         BinNode(const Data_T &item)
@@ -92,13 +92,6 @@ protected:
 
     };// end of class BinNode declaration
 
-//    class DataBinNode : public BinNode {
-//    private:
-//        Data_T data;
-//    public:
-//        DataBinNode(Data_T data_in) : BinNode(true), data(data_in) {}
-//    };
-
     /***** Data Members *****/
     BinNode *myRoot, *smallestNode = nullptr, *largestNode = nullptr;
 
@@ -114,19 +107,17 @@ protected:
 
     virtual void postDelete(const Data_T &deletedData, const BinNode *parentNode);
 
-//    virtual BinNode *initNode();
-
     virtual BinNode *initNode(const Data_T &data);
 
     virtual BinNode *initNode(const BinNode &data);
 
-    BinNode *smallest(BinNode *rootNode, BinNode *&parentNode, int &status);
+    static BinNode *smallest(BinNode *rootNode, BinNode *&parentNode, int &status);
 
-    BinNode *largest(BinNode *rootNode, BinNode *&parentNode, int &status);
+    static BinNode *largest(BinNode *rootNode, BinNode *&parentNode, int &status);
 
-    BinNode *smallest(BinNode *rootNode);
+    static BinNode *smallest(BinNode *rootNode);
 
-    BinNode *largest(BinNode *rootNode);
+    static BinNode *largest(BinNode *rootNode);
 
     virtual void cloneFrom(const BST<Data_T> *tree);
 
@@ -142,9 +133,10 @@ private:
 
 public:
     /****** Iterators ******/
-    class Iterator : public BST<Data_T>::BinNode {
+    class Iterator {
     protected:
         std::stack<BST<Data_T>::BinNode *> st, rev_st;
+        const BST<Data_T> *tree;
 
         void init(BST<Data_T>::BinNode *node) {
             while (node) {
@@ -154,24 +146,25 @@ public:
         }
 
     public:
-        Iterator(BST<Data_T>::BinNode *node) : BinNode(node->getData()) {
-            init(node);
+        Iterator(BST<Data_T>::BinNode *node, const BST<Data_T> *tree) : tree(tree) {
+            st.push(nullptr);
+            if (node) init(node);
+            std::cout << "Iterator Got root: " << tree->myRoot->getData().first;
             while (node != this->st.top())
                 next();
-//            this->BST<Data_T>::BinNode::data = st.top();
         }
 
         // Copy constr
-        Iterator(const Iterator &it) : BST<Data_T>::BinNode(it.data),
-                                       st(std::stack<BinNode *>(it.st)),
-                                       rev_st(std::stack<BinNode *>(it.rev_st)) {}
+        Iterator(const Iterator &it) : st(std::stack<BinNode *>(it.st)),
+                                       rev_st(std::stack<BinNode *>(it.rev_st)),
+                                       tree(it.tree) {}
 
         bool hasNext() const {
-            return !st.empty();
+            return !st.empty() && st.top();
         }
 
         virtual Data_T &get() {
-            return this->data;
+            return this->st.top()->getData();
         }
 
         virtual Data_T &next() {
@@ -182,7 +175,6 @@ public:
                 rev_st.push(popped);
                 init(popped->right);
             }
-            this->BST<Data_T>::BinNode::data = st.top()->getData();
             return popped->getData();
         }
 
@@ -193,24 +185,32 @@ public:
                 st.push(rev_st.top());
                 rev_st.pop();
             } else throw std::out_of_range("Tree Iterator reached first, cannot get previous");
-            this->BST<Data_T>::BinNode::data = st.top()->getData();
             return st.top()->getData();
+        }
+
+        bool operator==(const Iterator &other) {
+            return this->st.top() == other.st.top();
+        }
+
+        bool operator!=(const Iterator &other) {
+            return this->st.top() != other.st.top();
         }
     };
 
+    friend BST<Data_T>::Iterator;
+
     virtual BST<Data_T>::Iterator begin() {
-        BST<Data_T>::Iterator it(myRoot);
-        return it;
+        return BST<Data_T>::Iterator(smallestNode, this);
     }
 
     virtual BST<Data_T>::Iterator begin(Data_T &data) {
         BinNode *parent = nullptr, *node = this->searchNode(myRoot, data, parent);
         if (!node) throw std::out_of_range("could not instantiate Iterator, data not found in tree");
-        return BST<Data_T>::Iterator(node);
+        return BST<Data_T>::Iterator(node, this);
     }
 
     virtual BST<Data_T>::Iterator end() {
-        return BST<Data_T>::Iterator(largestNode);
+        return BST<Data_T>::Iterator(nullptr, this);
     }
 
 }; // end of class declaration
@@ -220,15 +220,20 @@ public:
 
 //--- Definition of constructors
 template<typename Data_T>
-BST<Data_T>::BST()
-        : myRoot(0) {}
+BST<Data_T>::BST(bool updateIfExists)
+        : updateIfExists(updateIfExists), myRoot(0) {}
+
+//template<typename Data_T>
+//BST<Data_T>::BST(const std::function<Data_T()> &default_init)
+//        : BST<Data_T>(true), default_init(default_init) {}
 
 template<typename Data_T>
-BST<Data_T>::BST(function<Data_T()> default_init)
-        : myRoot(0), default_init(default_init) {}
+BST<Data_T>::BST(const BST<Data_T> &copyFrom): updateIfExists(copyFrom.updateIfExists) {
+    cloneFrom(&copyFrom);
+}
 
 template<typename Data_T>
-BST<Data_T>::BST(const BST<Data_T> &copyFrom) {
+BST<Data_T>::BST(const BST<Data_T> *copyFrom): updateIfExists(copyFrom->updateIfExists) {
     cloneFrom(copyFrom);
 }
 
@@ -253,7 +258,7 @@ bool BST<Data_T>::empty() const { return !myRoot; }
 template<typename Data_T>
 /*public*/ Data_T *BST<Data_T>::search(const Data_T &item) const {
     BinNode *locptr = myRoot;
-    while (!locptr) {
+    while (locptr) {
         if (item < locptr->getData())       // descend left
             locptr = locptr->left;
         else if (locptr->getData() < item)  // descend right
@@ -283,24 +288,6 @@ BST<Data_T>::search(const DataSearch_T &searchItem,
     return nullptr;
 }
 
-//template<typename Data_T>
-///*protected*/ Data_T *BST<Data_T>::search(const Data_T &item, Data_T *&parent) const {
-//    BinNode *locptr = myRoot;   // search pointer
-////    BinNode *parent = 0;        // pointer to parent of current node
-//    while (locptr != 0) {
-//        parent = locptr;
-//        if (item < locptr->getData()) {      // descend left
-//            parent = locptr;
-//            locptr = locptr->left;
-//        } else if (locptr->getData() < item) {  // descend right
-//            parent = locptr;
-//            locptr = locptr->right;
-//        } else                           // item found
-//            return &(locptr->getData());
-//    }
-//    return nullptr;
-//}
-
 template<typename Data_T>
 void BST<Data_T>::insert(const Data_T &item) {
     BinNode *parent;        // pointer to parent of current node
@@ -328,10 +315,8 @@ void BST<Data_T>::insert(const Data_T &item) {
             parent->right = locptr;
             this->postInsert(parent->right, parent);
         }
-    } else
+    } else if (this->updateIfExists)// Item exists in tree, and updateIfExists set to true
         locptr->getData() = item;
-//    else
-//        cout << "Item already in the tree\n";
 }
 
 // Public methods to be called from user program
@@ -369,8 +354,11 @@ void BST<Data_T>::deleteNode(const Data_T &value) {
     else if (searchNode->left || searchNode->right)
         mode = ONE_CHILD;
     this->deleteNode(searchNode, parentNode, mode);
-//    cout << "Deleted " << value << " successfully, data in tree:" << endl;
-//    this->traverse(this->myRoot, IN_ORDER);
+}
+
+template<typename Data_T>
+void BST<Data_T>::clear() {
+    BinNode::deleteSubTree(this->myRoot);
 }
 
 template<typename Data_T>
@@ -402,7 +390,6 @@ int BST<Data_T>::nodeCount(BST<Data_T>::BinNode *node) const {
 template<typename Data_T>
 typename BST<Data_T>::BinNode *
 BST<Data_T>::searchNode(BST<Data_T>::BinNode *startNode, const Data_T &data, BST<Data_T>::BinNode *&parentNode) {
-//    if (startNode == NULL || startNode == 0) return nullptr;
     parentNode = nullptr;
     while (startNode) {
         if (startNode->getData() == data)
@@ -512,9 +499,6 @@ BST<Data_T>::deleteNode(BST<Data_T>::BinNode *node, BST<Data_T>::BinNode *parent
                 parentOfSmallestNode->left = smallestNode->right;
             else
                 node->right = smallestNode->right;
-
-//            cout << "Found smallest : [" << smallestNode->getData() << "] with parent : [" << parentOfSmallestNode->getData() << "]";
-
             smallestNode->left = node->left;
             smallestNode->right = node->right;
 
@@ -545,10 +529,6 @@ typename BST<Data_T>::BinNode *BST<Data_T>::smallest(BinNode *rootNode, BinNode 
         status = 1;
     }
     return rootNode;
-//    if (rootNode->left == NULL) return rootNode;
-//    parentNode = rootNode;
-//    status = 1;
-//    return smallest(rootNode->left, parentNode, status);
 }
 
 template<typename Data_T>
@@ -559,10 +539,6 @@ typename BST<Data_T>::BinNode *BST<Data_T>::largest(BinNode *rootNode, BinNode *
         status = 1;
     }
     return rootNode;
-//    if (rootNode->right == NULL) return rootNode;
-//    parentNode = rootNode;
-//    status = 1;
-//    return largest(rootNode->right, parentNode, status);
 }
 
 template<typename Data_T>
@@ -579,8 +555,6 @@ typename BST<Data_T>::BinNode *BST<Data_T>::largest(BinNode *rootNode) {
     while (rootNode && rootNode->right)
         rootNode = rootNode->right;
     return rootNode;
-//    if (rootNode->right == NULL) return rootNode;
-//    return largest(rootNode->right);
 }
 
 template<typename Data_T>
@@ -614,7 +588,8 @@ void BST<Data_T>::BinNode::cloneFrom(const BinNode *node) {
 
 template<typename Data_T>
 void BST<Data_T>::BinNode::deleteSubTree(BinNode *node) {
-    queue < BinNode * * > q;
+    if (!node) return;
+    std::queue < BinNode * * > q;
     q.push(&node);
     while (!q.empty()) {
         if ((*q.front())->left)

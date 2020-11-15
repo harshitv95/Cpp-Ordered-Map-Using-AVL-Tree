@@ -1,8 +1,6 @@
 #include <iostream>
 #include <functional>
 
-using namespace std;
-
 #ifndef AVL_TREE
 #define AVL_TREE
 
@@ -15,9 +13,13 @@ template<typename Data_T>
 class AVL : public BST<Data_T> {
 public:
     /***** Function Members *****/
-    AVL();
+    AVL() : AVL(true) {}
 
-    AVL(std::function<Data_T()> default_initializer);
+    AVL(const AVL<Data_T> &);
+
+    AVL(bool updateIfExists);
+
+//    AVL(std::function<Data_T()> default_initializer);
 
     /***** Others *****/
     typedef enum {
@@ -59,6 +61,10 @@ protected:
     AVLNode *initNode(const Data_T &data);
 
     AVLNode *initNode(const typename BST<Data_T>::BinNode &data);
+    
+    virtual void cloneFrom(const BST<Data_T> *tree);
+
+    virtual BinNode *cloneFrom(const BinNode *node);
 
 private:
     /***** Private Function Members *****/
@@ -72,24 +78,35 @@ public:
     class
     Iterator : public BST<Data_T>::Iterator {
     public:
-        Iterator(typename BST<Data_T>::BinNode *node) : BST<Data_T>::Iterator(node) {}
+        Iterator(typename AVL<Data_T>::BinNode *node, const AVL<Data_T> *tree) :
+                BST<Data_T>::Iterator(node, tree) {}
 
         // Copy constr
         Iterator(const Iterator &it) : BST<Data_T>::Iterator(it) {}
 
+        Iterator(const typename BST<Data_T>::Iterator &it) : BST<Data_T>::Iterator(it) {}
+
         Data_T &prev() {
             bool found = 0;
-            if (this->st.top()->left) {
-                this->st.push(this->st.top());
+            if (!this->st.top()) {
+                this->st.push(((AVL<Data_T> *) this->tree)->largestNode);
+                found = true;
+            } else if (this->st.top()->left) {
+                this->st.push(BST<Data_T>::largest(this->st.top()->left));
                 found = true;
             } else {
                 AVL::AVLNode *node = (AVL::AVLNode *) this->st.top();
+                this->st.pop();
                 while (
-                        node->childType == LEFT_NODE
+                        node->childType == LEFT_NODE ||
+                        node == this->st.top()
                         ) {
                     node = node->parent;
+                    this->st.pop();
+//                    if (node != this->st.top())
+//                        throw std::runtime_error("Iterator incorrectly constructed, cannot get previous");
                 }
-                if (node->childType == LEFT_NODE) {
+                if (node->childType == RIGHT_NODE) {
                     found = true;
                     this->st.push(node->parent);
                 }
@@ -97,24 +114,23 @@ public:
 
             if (!found)
                 throw std::out_of_range("Tree Iterator reached first, cannot get previous");
-            this->BST<Data_T>::BinNode::data = this->st.top()->getData();
             return this->st.top()->getData();
         }
     };
 
     virtual typename BST<Data_T>::Iterator begin() override {
-        AVL<Data_T>::Iterator it(this->myRoot);
-        return it;
+        return AVL<Data_T>::Iterator(((AVLNode *) this->smallestNode), this);
     }
 
     virtual typename BST<Data_T>::Iterator begin(Data_T &data) override {
-        typename BST<Data_T>::BinNode *parent = nullptr, *node = this->searchNode(this->myRoot, data, parent);
+        typename BST<Data_T>::BinNode *parent = nullptr;
+        AVLNode *node = (AVLNode *) this->searchNode(this->myRoot, data, parent);
         if (!node) throw std::out_of_range("could not instantiate Iterator, data not found in tree");
-        return AVL<Data_T>::Iterator(node);
+        return AVL<Data_T>::Iterator(node, this);
     }
 
     virtual typename BST<Data_T>::Iterator end() override {
-        return AVL<Data_T>::Iterator(this->largestNode);
+        return AVL<Data_T>::Iterator(nullptr, this);
     }
 
 }; // end of class declaration
@@ -123,10 +139,13 @@ public:
 
 //--- Definition of constructor
 template<typename Data_T>
-AVL<Data_T>::AVL() : BST<Data_T>() {}
+AVL<Data_T>::AVL(const AVL<Data_T> &tree) : BST<Data_T>(tree) {}
 
 template<typename Data_T>
-AVL<Data_T>::AVL(std::function<Data_T()> default_initializer) : BST<Data_T>(default_initializer) {}
+AVL<Data_T>::AVL(bool updateIfExists) : BST<Data_T>(updateIfExists) {}
+
+//template<typename Data_T>
+//AVL<Data_T>::AVL(std::function<Data_T()> default_initializer) : BST<Data_T>(default_initializer) {}
 
 // Private methods
 template<typename Data_T>

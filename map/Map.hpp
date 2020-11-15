@@ -14,18 +14,11 @@ class Map {
     using ValueType = std::pair<Key_T, Mapped_T>;
 
 protected:
-    class MapKeyNode;
-
     class MapDataNode : public ValueType {
     public:
         MapDataNode(const Key_T key, Mapped_T mappedItem) : ValueType({key, mappedItem}) {}
 
         MapDataNode(std::pair<const Key_T, Mapped_T> p) : MapDataNode(p.first, p.second) {}
-
-//        MapDataNode(std::pair <Key_T, Mapped_T> p) : MapDataNode(p.first, p.second) {
-//            cout << "INPUT key=" << p.first << ", value=" << p.second << endl;
-//            cout << "Set key=" << this->MapKeyNode::key << ", value=" << this->mappedItem << endl;
-//        }
 
         MapDataNode(std::initializer_list <Mapped_T> list) : MapDataNode(list.begin(), list.begin() + 1) {}
 
@@ -36,8 +29,6 @@ protected:
         Mapped_T &getMappedItem() {
             return this->second;
         }
-
-        const static std::function<short int(const MapKeyNode &, MapDataNode &)> key_data_comp;
     };
 
     class MapKeyNode {
@@ -65,30 +56,71 @@ protected:
         bool operator==(const MapDataNode &node) const {
             return key == node.first;
         }
+
+        const static std::function<short int(const MapKeyNode &, MapDataNode &)> key_data_comp;
     };
 
     class Iterator {
+        friend Map<Key_T, Mapped_T>;
     public:
         Iterator(AVL<MapDataNode> &tree) : Iterator(tree.begin()) {}
 
         Iterator(AVL<MapDataNode> &tree, MapDataNode &node) : Iterator(tree.begin(node)) {}
 
-        Iterator(const Iterator &it) : Iterator(it.it) {}
+//        Iterator(const Iterator &it) : Iterator(it.it) {}
+
+        virtual ~Iterator() {}
+
+        void inc() {
+            it.next();
+        }
+
+        void dec() {
+            it.prev();
+        }
 
         ValueType &operator*() {
             return it.get();
         }
 
-        void operator++() {
-            it.next();
+        ValueType *operator->() {
+            return &it.get();
         }
 
-        void operator--() {
-            it.prev();
+        // Prefix inc/dec
+        Iterator &operator++() {
+            this->inc();
+            return *this;
+        }
+
+        Iterator &operator--() {
+            this->dec();
+            return *this;
+        }
+
+        // Postfix inc/dec
+        Iterator operator++(int) {
+            Iterator old = *this;
+            this->inc();
+            return old;
+        }
+
+        Iterator operator--(int) {
+            Iterator old = *this;
+            this->dec();
+            return old;
+        }
+
+        bool operator==(const Iterator &other) {
+            return this->it == other.it;
+        }
+
+        bool operator!=(const Iterator &other) {
+            return this->it != other.it;
         }
 
     protected:
-        typename BST<MapDataNode>::Iterator it;
+        typename AVL<MapDataNode>::Iterator it;
 
         Iterator(const typename BST<MapDataNode>::Iterator &it) : it(it) {}
 
@@ -96,16 +128,27 @@ protected:
 
     AVL<MapDataNode> tree;
 
-    Mapped_T &get_mapped(const Key_T &) const;
+    MapDataNode *get_data_node(const Key_T &) const;
 
+    MapDataNode *get_data_node(const MapDataNode &) const;
 
 public:
     // -- constructing
-    Map() {}
+    Map() : tree(false) {}
 
-    Map(std::initializer_list <std::pair<const Key_T, Mapped_T>> list) {
+    Map(std::initializer_list <std::pair<const Key_T, Mapped_T>> list) : tree(false) {
         for (std::pair<const Key_T, Mapped_T> p : list)
             this->insert(p);
+    }
+
+    Map(const Map &map) : tree(map.tree) {}
+
+    ~Map() {
+        this->clear();
+    }
+
+    Map<Key_T, Mapped_T> &operator=(const Map<Key_T, Mapped_T> &map) {
+        return Map<Key_T, Mapped_T>(map);
     }
 
     // -- size:
@@ -129,8 +172,21 @@ public:
         return Iterator(tree, node);
     }
 
+    Iterator end() {
+        return Iterator(tree.end());
+    }
+
     // -- modifiers:
     std::pair<Iterator, bool> insert(const std::pair<const Key_T, Mapped_T> &);
+
+    template<typename IT_T>
+    void insert(IT_T range_beg, IT_T range_end);
+
+    void erase(const Key_T &);
+
+    void erase(const Iterator &);
+
+    void clear();
 
 };
 
@@ -140,14 +196,15 @@ public:
 // - protected
 // -- element access
 template<typename Key_T, typename Mapped_T>
-Mapped_T &Map<Key_T, Mapped_T>::get_mapped(const Key_T &key) const {
-    MapKeyNode keyNode(key);
-    MapDataNode *dataNode = tree.search(keyNode, MapDataNode::key_data_comp);
-    if (!dataNode)
-        throw std::out_of_range("specified key does not exist");
-    return (dataNode)->getMappedItem();
+typename Map<Key_T, Mapped_T>::MapDataNode *Map<Key_T, Mapped_T>::get_data_node(const Key_T &key) const {
+    return tree.search(MapKeyNode(key), MapKeyNode::key_data_comp);
 }
 
+template<typename Key_T, typename Mapped_T>
+typename Map<Key_T, Mapped_T>::MapDataNode *
+Map<Key_T, Mapped_T>::get_data_node(const typename Map<Key_T, Mapped_T>::MapDataNode &node) const {
+    return tree.search(node);
+}
 
 // - public:
 // -- size:
@@ -165,7 +222,7 @@ bool Map<Key_T, Mapped_T>::empty() const {
 template<typename Key_T, typename Mapped_T>
 Mapped_T &Map<Key_T, Mapped_T>::operator[](const Key_T &key) {
     MapKeyNode keyNode(key);
-    MapDataNode *dataNode = tree.search(keyNode, MapDataNode::key_data_comp);
+    MapDataNode *dataNode = tree.search(keyNode, MapKeyNode::key_data_comp);
     if (!dataNode) {
         dataNode = new MapDataNode(key, Mapped_T());
         tree.insert(dataNode);
@@ -175,12 +232,18 @@ Mapped_T &Map<Key_T, Mapped_T>::operator[](const Key_T &key) {
 
 template<typename Key_T, typename Mapped_T>
 Mapped_T &Map<Key_T, Mapped_T>::at(const Key_T &key) {
-    return this->get_mapped(key);
+    MapDataNode *node = this->get_data_node(key);
+    if (!node)
+        throw std::out_of_range("specified key does not exist");
+    return node->getMappedItem();
 }
 
 template<typename Key_T, typename Mapped_T>
 const Mapped_T &Map<Key_T, Mapped_T>::at(const Key_T &key) const {
-    return this->get_mapped(key);
+    const MapDataNode *node = this->get_data_node(key);
+    if (!node)
+        throw std::out_of_range("specified key does not exist");
+    return node->getMappedItem();
 }
 
 // -- modifiers:
@@ -188,24 +251,44 @@ template<typename Key_T, typename Mapped_T>
 std::pair<typename Map<Key_T, Mapped_T>::Iterator, bool>
 Map<Key_T, Mapped_T>::insert(const std::pair<const Key_T, Mapped_T> &pair) {
     MapDataNode node(pair);
-    tree.insert(node);
-    Iterator it = begin(node);
-    return {it, true};
+    bool new_inserted;
+    if ((new_inserted = !get_data_node(node))) {
+        tree.insert(node);
+    }
+    return {begin(node), new_inserted};
 }
 
-//template<typename Key_T, typename Mapped_T>
-//std::pair<int, bool> Map<Key_T, Mapped_T>::insert(const typename Map<Key_T, Mapped_T>::MapDataNode node) {
-//    tree.insert(node);
-//    return {1, true};
-//}
+template<typename Key_T, typename Mapped_T>
+template<typename IT_T>
+void Map<Key_T, Mapped_T>::insert(IT_T range_beg, IT_T range_end) {
+    while (range_beg != range_end) {
+        tree.insert(MapDataNode(*range_beg));
+        range_beg++;
+    }
+}
 
-/*********** MapDataNode ************/
+template<typename Key_T, typename Mapped_T>
+void Map<Key_T, Mapped_T>::erase(const Key_T &key) {
+    tree.deleteNode(MapKeyNode(key), MapKeyNode::key_data_comp);
+}
+
+template<typename Key_T, typename Mapped_T>
+void Map<Key_T, Mapped_T>::erase(const Iterator &it) {
+    this->erase((*it).first);
+}
+
+template<typename Key_T, typename Mapped_T>
+void Map<Key_T, Mapped_T>::clear() {
+    tree.clear();
+}
+
+/*********** MapKeyNode ************/
 // public:
 // -- static members:
 template<typename K, typename M>
 const std::function<short int(
         const typename Map<K, M>::MapKeyNode &, typename Map<K, M>::MapDataNode &
-)> Map<K, M>::MapDataNode::key_data_comp =
+)> Map<K, M>::MapKeyNode::key_data_comp =
         [](const MapKeyNode &key,
            MapDataNode &data) {
             return key < data ? -1 : key == data ? 0 : 1;
