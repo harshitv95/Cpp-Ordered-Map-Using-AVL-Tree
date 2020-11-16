@@ -117,14 +117,15 @@ public:
         }
     };
 
-    class ReverseIterator : Iterator {
+    class ReverseIterator : public AVL<Data_T>::Iterator {
     public:
-        ReverseIterator(typename AVL<Data_T>::BinNode *node, const AVL<Data_T> *tree) : Iterator(node, tree) {}
+        ReverseIterator(typename AVL<Data_T>::BinNode *node, const AVL<Data_T> *tree) : AVL<Data_T>::Iterator(node,
+                                                                                                              tree) {}
 
         // Copy constr
-        ReverseIterator(const Iterator &it) : Iterator(it) {}
+        ReverseIterator(const Iterator &it) : AVL<Data_T>::Iterator(it) {}
 
-        ReverseIterator(const typename BST<Data_T>::Iterator &it) : Iterator(it) {}
+        ReverseIterator(const typename BST<Data_T>::Iterator &it) : AVL<Data_T>::Iterator(it) {}
 
         Data_T &next() {
             bool found = 0;

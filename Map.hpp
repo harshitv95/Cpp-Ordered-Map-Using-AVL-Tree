@@ -32,6 +32,14 @@ namespace cs540 {
                 return this->second;
             }
 
+//            const Key_T getKey() const {
+//                return this->first;
+//            }
+//
+//            Mapped_T getMappedItem() const {
+//                return this->second;
+//            }
+
             bool operator<(const MapDataNode &node) const {
                 return this->first < node.first || (this->first == node.first && this->second < node.second);
 //            return (this->first < node.first && this->second <= node.second) ||
@@ -138,7 +146,7 @@ namespace cs540 {
 
             Iterator(const AVL<MapDataNode> &tree, const MapDataNode &node) : Iterator(tree.begin(node)) {}
 
-            Iterator(const typename BST<MapDataNode>::Iterator &it) : it(it) {}
+            Iterator(const typename AVL<MapDataNode>::Iterator &it) : it(it) {}
 
         };
 
@@ -164,7 +172,7 @@ namespace cs540 {
 
             ConstIterator(const AVL<MapDataNode> &tree, const MapDataNode &node) : Iterator(tree, node) {}
 
-            ConstIterator(const typename BST<MapDataNode>::Iterator &it) : Iterator(it) {}
+            ConstIterator(const typename AVL<MapDataNode>::Iterator &it) : Iterator(it) {}
         };
 
         class ReverseIterator : public Iterator {
@@ -177,7 +185,7 @@ namespace cs540 {
         protected:
             ReverseIterator(AVL<MapDataNode> &tree) : Iterator(tree.rbegin()) {}
 
-            ReverseIterator(const typename BST<MapDataNode>::Iterator &it) : Iterator(it) {}
+            ReverseIterator(const typename AVL<MapDataNode>::ReverseIterator &it) : Iterator(it) {}
         };
 
         // -- constructing
@@ -188,13 +196,13 @@ namespace cs540 {
                 this->insert(p);
         }
 
-        Map(const Map &map) : tree(map.tree) {}
+        Map(const Map<Key_T, Mapped_T> &map) : tree(map.tree) {}
 
         ~Map() {
             this->clear();
         }
 
-        Map<Key_T, Mapped_T> &operator=(const Map<Key_T, Mapped_T> &other) {
+        Map<Key_T, Mapped_T> operator=(const Map<Key_T, Mapped_T> &other) {
             this->clear();
             return Map<Key_T, Mapped_T>(other);
         }
@@ -240,12 +248,12 @@ namespace cs540 {
             return ConstIterator(tree.end());
         }
 
-        ReverseIterator rbegin() {
-            return ReverseIterator(tree.rbegin());
+        Map<Key_T, Mapped_T>::ReverseIterator rbegin() {
+            return Map<Key_T, Mapped_T>::ReverseIterator(tree.rbegin());
         }
 
-        ReverseIterator rend() {
-            return ReverseIterator(tree.rend());
+        Map<Key_T, Mapped_T>::ReverseIterator rend() {
+            return Map<Key_T, Mapped_T>::ReverseIterator(tree.rend());
         }
 
         // -- modifiers:
@@ -304,7 +312,7 @@ namespace cs540 {
 // -- size:
     template<typename Key_T, typename Mapped_T>
     size_t Map<Key_T, Mapped_T>::size() const {
-        return tree.size();
+        return tree.nodeCount();
     }
 
     template<typename Key_T, typename Mapped_T>
@@ -316,12 +324,13 @@ namespace cs540 {
     template<typename Key_T, typename Mapped_T>
     Mapped_T &Map<Key_T, Mapped_T>::operator[](const Key_T &key) {
         MapKeyNode keyNode(key);
-        MapDataNode *dataNode = tree.search(keyNode, MapKeyNode::key_data_comp);
-        if (!dataNode) {
-            dataNode = new MapDataNode(key, Mapped_T());
+        MapDataNode *dataNodePtr = tree.search(keyNode, MapKeyNode::key_data_comp);
+        if (!dataNodePtr) {
+            MapDataNode dataNode(key, Mapped_T());
             tree.insert(dataNode);
+            return dataNode.getMappedItem();
         }
-        return dataNode->getMappedItem();
+        return dataNodePtr->getMappedItem();
     }
 
     template<typename Key_T, typename Mapped_T>
@@ -337,7 +346,7 @@ namespace cs540 {
         const MapDataNode *node = this->get_data_node(key);
         if (!node)
             throw std::out_of_range("specified key does not exist");
-        return node->getMappedItem();
+        return node->second;
     }
 
     template<typename Key_T, typename Mapped_T>
