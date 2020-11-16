@@ -53,7 +53,8 @@ public:
         LEAF_NODE, ONE_CHILD, TWO_CHILDREN
     } delete_mode;
 
-    BST<Data_T> &operator=(const BST<Data_T> &tree) {
+    BST<Data_T> operator=(const BST<Data_T> &tree) {
+        this->clear();
         return BST<Data_T>(tree);
     }
 
@@ -137,7 +138,9 @@ protected:
     BinNode *myRoot = nullptr, *smallestNode = nullptr, *largestNode = nullptr;
 
     /***** Protected Function Members *****/
-    BinNode *searchNode(BinNode *startNode, const Data_T &data, BinNode *&parentNode);
+    BinNode *searchNode(BinNode *startNode, const Data_T &data, BinNode *&parentNode) const;
+
+    BinNode *searchNode(const BinNode *startNode, const Data_T &data, BinNode *&parentNode) const;
 
     template<typename DataSearch_T>
     BinNode *searchNode(BinNode *startNode, const DataSearch_T &data,
@@ -204,7 +207,7 @@ public:
             return !st.empty() && st.top();
         }
 
-        virtual Data_T &get() {
+        virtual Data_T &get() const {
             return this->st.top()->getData();
         }
 
@@ -240,17 +243,17 @@ public:
 
     friend BST<Data_T>::Iterator;
 
-    virtual BST<Data_T>::Iterator begin() {
+    virtual BST<Data_T>::Iterator begin() const {
         return BST<Data_T>::Iterator(smallestNode, this);
     }
 
-    virtual BST<Data_T>::Iterator begin(Data_T &data) {
+    virtual BST<Data_T>::Iterator begin(const Data_T &data) const {
         BinNode *parent = nullptr, *node = this->searchNode(myRoot, data, parent);
         if (!node) throw std::out_of_range("could not instantiate Iterator, data not found in tree");
         return BST<Data_T>::Iterator(node, this);
     }
 
-    virtual BST<Data_T>::Iterator end() {
+    virtual BST<Data_T>::Iterator end() const {
         return BST<Data_T>::Iterator(nullptr, this);
     }
 
@@ -280,7 +283,7 @@ BST<Data_T>::BST(const BST<Data_T> *copyFrom): updateIfExists(copyFrom->updateIf
 
 template<typename Data_T>
 void BST<Data_T>::cloneFrom(const BST<Data_T> *tree) {
-    BinNode::deleteSubTree(this->myRoot);
+    this->clear();
     this->myRoot = cloneFrom(tree->myRoot);
     this->smallestNode = this->smallest(myRoot);
     this->largestNode = this->largest(myRoot);
@@ -358,8 +361,9 @@ void BST<Data_T>::insert(const Data_T &item) {
             parent->right = locptr;
             this->postInsert(parent->right, parent);
         }
-    } else if (this->updateIfExists)// Item exists in tree, and updateIfExists set to true
-        locptr->getData() = item;
+    }
+//    else if (this->updateIfExists)// Item exists in tree, and updateIfExists set to true
+//        locptr->getData() = item;
 }
 
 // Public methods to be called from user program
@@ -432,7 +436,27 @@ int BST<Data_T>::nodeCount(BST<Data_T>::BinNode *node) const {
 
 template<typename Data_T>
 typename BST<Data_T>::BinNode *
-BST<Data_T>::searchNode(BST<Data_T>::BinNode *startNode, const Data_T &data, BST<Data_T>::BinNode *&parentNode) {
+BST<Data_T>::searchNode(BST<Data_T>::BinNode *startNode, const Data_T &data, BST<Data_T>::BinNode *&parentNode) const {
+    parentNode = nullptr;
+    while (startNode) {
+        if (startNode->getData() == data)
+            return startNode;
+        else if (data < startNode->getData()) {
+            parentNode = startNode;
+            startNode = startNode->left;
+        } else {
+            parentNode = startNode;
+            startNode = startNode->right;
+        }
+    }
+    return nullptr;
+}
+
+template<typename Data_T>
+typename BST<Data_T>::BinNode *
+BST<Data_T>::searchNode(const BST<Data_T>::BinNode *searchFrom, const Data_T &data, BST<Data_T>::BinNode *&parentNode) const {
+//    if (startNode == NULL || startNode == 0) return nullptr;
+    BinNode *startNode = searchFrom;
     parentNode = nullptr;
     while (startNode) {
         if (startNode->getData() == data)

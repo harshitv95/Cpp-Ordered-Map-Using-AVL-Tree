@@ -164,26 +164,26 @@ public:
         }
     };
 
-    virtual typename BST<Data_T>::Iterator begin() override {
+    virtual typename BST<Data_T>::Iterator begin() const {
         return AVL<Data_T>::Iterator(((AVLNode *) this->smallestNode), this);
     }
 
-    virtual typename BST<Data_T>::Iterator begin(Data_T &data) override {
+    virtual typename BST<Data_T>::Iterator begin(const Data_T &data) const {
         typename BST<Data_T>::BinNode *parent = nullptr;
         AVLNode *node = (AVLNode *) this->searchNode(this->myRoot, data, parent);
         if (!node) throw std::out_of_range("could not instantiate Iterator, data not found in tree");
         return AVL<Data_T>::Iterator(node, this);
     }
 
-    virtual typename BST<Data_T>::Iterator end() override {
+    virtual typename BST<Data_T>::Iterator end() const {
         return AVL<Data_T>::Iterator(nullptr, this);
     }
 
-    virtual ReverseIterator rbegin() {
+    virtual ReverseIterator rbegin() const {
         return ReverseIterator(((AVLNode *) this->largestNode), this);
     }
 
-    virtual ReverseIterator rend() {
+    virtual ReverseIterator rend() const {
         return ReverseIterator(nullptr, this);
     }
 
