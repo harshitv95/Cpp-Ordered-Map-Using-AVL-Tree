@@ -30,13 +30,15 @@ protected:
             return this->second;
         }
 
-//        bool operator<(const MapDataNode &node) const {
-//            return this->first < node.first || (this->first == node.first && this->second < node.second);
-//        }
-//
-//        bool operator==(const MapDataNode &node) const {
-//            return key == node.first;
-//        }
+        bool operator<(const MapDataNode &node) const {
+            return this->first < node.first || (this->first == node.first && this->second < node.second);
+//            return (this->first < node.first && this->second <= node.second) ||
+//                   (this->first <= node.first && this->second < node.second);
+        }
+
+        bool operator==(const MapDataNode &node) const {
+            return this->first == node.first && this->second == node.second;
+        }
     };
 
     class MapKeyNode {
@@ -49,19 +51,19 @@ protected:
             return key;
         }
 
-        bool operator<(const MapKeyNode &node) const {
+        bool operator<(const typename Map<Key_T, Mapped_T>::MapKeyNode &node) const {
             return key < node.key;
         }
 
-        bool operator==(const MapKeyNode &node) const {
+        bool operator==(const typename Map<Key_T, Mapped_T>::MapKeyNode &node) const {
             return key == node.key;
         }
 
-        bool operator<(const MapDataNode &node) const {
+        bool operator<(const typename Map<Key_T, Mapped_T>::MapDataNode &node) const {
             return key < node.first;
         }
 
-        bool operator==(const MapDataNode &node) const {
+        bool operator==(const typename Map<Key_T, Mapped_T>::MapDataNode &node) const {
             return key == node.first;
         }
 
@@ -71,27 +73,23 @@ protected:
     class Iterator {
         friend Map<Key_T, Mapped_T>;
     public:
-        Iterator(AVL<MapDataNode> &tree) : Iterator(tree.begin()) {}
-
-        Iterator(AVL<MapDataNode> &tree, MapDataNode &node) : Iterator(tree.begin(node)) {}
-
-//        Iterator(const Iterator &it) : Iterator(it.it) {}
+        Iterator(const Iterator &it) : Iterator(it.it) {}
 
         virtual ~Iterator() {}
 
-        void inc() {
+        virtual void inc() {
             it.next();
         }
 
-        void dec() {
+        virtual void dec() {
             it.prev();
         }
 
-        ValueType &operator*() {
+        virtual ValueType &operator*() {
             return it.get();
         }
 
-        ValueType *operator->() {
+        virtual ValueType *operator->() {
             return &it.get();
         }
 
@@ -119,23 +117,59 @@ protected:
             return old;
         }
 
-        bool operator==(const Iterator &other) {
+        bool operator==(const typename Map<Key_T, Mapped_T>::Iterator &other) {
             return this->it == other.it;
         }
 
-        bool operator!=(const Iterator &other) {
+        bool operator!=(const typename Map<Key_T, Mapped_T>::Iterator &other) {
             return this->it != other.it;
         }
 
     protected:
         typename AVL<MapDataNode>::Iterator it;
 
+        Iterator(AVL<MapDataNode> &tree) : Iterator(tree.begin()) {}
+
+        Iterator(AVL<MapDataNode> &tree, MapDataNode &node) : Iterator(tree.begin(node)) {}
+
         Iterator(const typename BST<MapDataNode>::Iterator &it) : it(it) {}
 
     };
 
     class ConstIterator : public Iterator {
+    public:
+        ConstIterator(const Iterator &it) : Iterator(it) {}
 
+        ConstIterator(const ConstIterator &it) : Iterator(it) {}
+
+        ~ConstIterator() {}
+
+        virtual const ValueType &operator*() {
+            return this->it.get();
+        }
+
+        virtual const ValueType *operator->() {
+            return &(this->it.get());
+        }
+
+    protected:
+        ConstIterator(AVL<MapDataNode> &tree) : Iterator(tree) {}
+
+        ConstIterator(AVL<MapDataNode> &tree, MapDataNode &node) : Iterator(tree, node) {}
+
+        ConstIterator(const typename BST<MapDataNode>::Iterator &it) : Iterator(it) {}
+    };
+
+    class ReverseIterator : public Iterator {
+    public:
+        ReverseIterator(const ReverseIterator &it) : Iterator(it) {}
+
+        ~ReverseIterator() {}
+
+    protected:
+        ReverseIterator(AVL<MapDataNode> &tree) : Iterator(tree.rbegin()) {}
+
+        ReverseIterator(const typename BST<MapDataNode>::Iterator &it) : Iterator(it) {}
     };
 
     AVL<MapDataNode> tree;
@@ -175,6 +209,8 @@ public:
 
     Iterator find(const Key_T &);
 
+    ConstIterator find(const Key_T &) const;
+
     Mapped_T &operator[](const Key_T &key);
 
     // -- iterators
@@ -190,6 +226,26 @@ public:
         return Iterator(tree.end());
     }
 
+    ConstIterator begin() const {
+        return ConstIterator(tree);
+    }
+
+    ConstIterator begin(MapDataNode &node) const {
+        return ConstIterator(tree, node);
+    }
+
+    ConstIterator end() const {
+        return ConstIterator(tree.end());
+    }
+
+    ReverseIterator rbegin() {
+        return ReverseIterator(tree.rbegin());
+    }
+
+    ReverseIterator rend() {
+        return ReverseIterator(tree.rend());
+    }
+
     // -- modifiers:
     std::pair<Iterator, bool> insert(const std::pair<const Key_T, Mapped_T> &);
 
@@ -201,6 +257,19 @@ public:
     void erase(const Iterator &);
 
     void clear();
+
+    // -- equality:
+    bool operator==(const Map<Key_T, Mapped_T> &other) {
+        return this->size() == other.size() && this->tree == other.tree;
+    }
+
+    bool operator!=(const Map<Key_T, Mapped_T> &other) {
+        return this->size() != other.size() || this->tree != other.tree;
+    }
+
+    bool operator<(const Map<Key_T, Mapped_T> &other) {
+        return this->tree < other.tree;
+    }
 
 };
 
@@ -262,6 +331,12 @@ const Mapped_T &Map<Key_T, Mapped_T>::at(const Key_T &key) const {
 
 template<typename Key_T, typename Mapped_T>
 typename Map<Key_T, Mapped_T>::Iterator Map<Key_T, Mapped_T>::find(const Key_T &key) {
+    const MapDataNode *node = this->get_data_node(key);
+    return node ? begin(&node) : end();
+}
+
+template<typename Key_T, typename Mapped_T>
+typename Map<Key_T, Mapped_T>::ConstIterator Map<Key_T, Mapped_T>::find(const Key_T &key) const {
     const MapDataNode *node = this->get_data_node(key);
     return node ? begin(&node) : end();
 }

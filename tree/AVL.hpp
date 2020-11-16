@@ -75,8 +75,7 @@ private:
 
 
 public:
-    class
-    Iterator : public BST<Data_T>::Iterator {
+    class Iterator : public BST<Data_T>::Iterator {
     public:
         Iterator(typename AVL<Data_T>::BinNode *node, const AVL<Data_T> *tree) :
                 BST<Data_T>::Iterator(node, tree) {}
@@ -118,6 +117,53 @@ public:
         }
     };
 
+    class ReverseIterator : Iterator {
+    public:
+        ReverseIterator(typename AVL<Data_T>::BinNode *node, const AVL<Data_T> *tree) : Iterator(node, tree) {}
+
+        // Copy constr
+        ReverseIterator(const Iterator &it) : Iterator(it) {}
+
+        ReverseIterator(const typename BST<Data_T>::Iterator &it) : Iterator(it) {}
+
+        Data_T &next() {
+            bool found = 0;
+            if (!this->st.top()) {
+//                this->st.push(((AVL<Data_T> *) this->tree)->largestNode);
+                found = false;
+            } else if (this->st.top()->left) {
+                this->st.push(BST<Data_T>::largest(this->st.top()->left));
+                found = true;
+            } else {
+                AVL::AVLNode *node = (AVL::AVLNode *) this->st.top();
+                this->st.pop();
+                while (
+                        node->childType == LEFT_NODE ||
+                        node == this->st.top()
+                        ) {
+                    node = node->parent;
+                    this->st.pop();
+//                    if (node != this->st.top())
+//                        throw std::runtime_error("Iterator incorrectly constructed, cannot get previous");
+                }
+                if (node->childType == RIGHT_NODE) {
+                    found = true;
+                    this->st.push(node->parent);
+                }
+            }
+
+            if (!found)
+                throw std::out_of_range("Tree Iterator reached first, cannot get previous");
+            return this->st.top()->getData();
+        }
+
+        Data_T &prev() {
+            if (!this->st.top())
+                this->st.push(((AVL<Data_T> *) this->tree)->smallestNode);
+            return this->BST<Data_T>::Iterator::next();
+        }
+    };
+
     virtual typename BST<Data_T>::Iterator begin() override {
         return AVL<Data_T>::Iterator(((AVLNode *) this->smallestNode), this);
     }
@@ -131,6 +177,14 @@ public:
 
     virtual typename BST<Data_T>::Iterator end() override {
         return AVL<Data_T>::Iterator(nullptr, this);
+    }
+
+    virtual ReverseIterator rbegin() {
+        return ReverseIterator(((AVLNode *) this->largestNode), this);
+    }
+
+    virtual ReverseIterator rend() {
+        return ReverseIterator(nullptr, this);
     }
 
 }; // end of class declaration

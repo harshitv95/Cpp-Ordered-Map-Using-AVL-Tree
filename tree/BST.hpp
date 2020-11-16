@@ -57,6 +57,40 @@ public:
         return BST<Data_T>(tree);
     }
 
+    bool operator==(const BST<Data_T> &tree) {
+        if (!tree.myRoot) return !this->myRoot;
+        if (!this->myRoot) return false;
+        if (this->nodeCount() != tree.nodeCount()) return false;
+        if (this->nodeCount() == tree.nodeCount() && this->empty()) return true;
+
+        Iterator it1(this->begin()), it2(tree.begin());
+        while (it1.hasNext() && it2.hasNext()) {
+            if (it1.next() != it2.next()) return false;
+        }
+        return !it1.hasNext() && !it2.hasNext();
+    }
+
+    bool operator!=(const BST<Data_T> &tree) {
+        if (!tree.myRoot) return !!this->myRoot;
+        if (this->myRoot) return false;
+        if (this->nodeCount() != tree.nodeCount()) return true;
+        if (this->nodeCount() == tree.nodeCount() && this->empty()) return false;
+
+        Iterator it1(this->begin()), it2(tree.begin());
+        while (it1.hasNext() && it2.hasNext()) {
+            if (it1.next() == it2.next()) return false;
+        }
+        return it1.hasNext() || it2.hasNext();
+    }
+
+    bool operator<(const BST<Data_T> &tree) {
+        Iterator it1(this->begin()), it2(tree.begin());
+        while (it1.hasNext() && it2.hasNext()) {
+            if (!(it1.next() < it2.next())) return false;
+        }
+        return it2.hasNext();
+    }
+
 protected:
     const bool updateIfExists;
     std::function<Data_T()> default_init;
@@ -88,7 +122,14 @@ protected:
             return this->data;
         }
 
+//        bool operator==(const typename BST<Data_T>::BinNode &other) {
+//            if (!(this->getData() == other.getData())) return false;
+//            if ()
+//        }
+
         static void deleteSubTree(BinNode *&node);
+
+//        static void subTreeEquals(const BinNode *&node1, const BinNode *&node2);
 
     };// end of class BinNode declaration
 
@@ -601,3 +642,39 @@ void BST<Data_T>::BinNode::deleteSubTree(BinNode *&node) {
         q.pop();
     }
 }
+
+//template<typename Data_T>
+//bool BST<Data_T>::BinNode::subTreeEquals(const BinNode *node1, const BinNode *node2) {
+//    if (!node1) return !node2;
+//    if (!node2) return false;
+//    std::queue<typename BST<Data_T>::BinNode *> q1, q2;
+//    typename BST<Data_T>::BinNode *n1, *n2;
+//
+//    q1.push(node1);
+//    q2.push(node2);
+//
+//    while (!q1.empty()) {
+//        n1 = q1.front();
+//        q1.pop();
+//        n2 = q2.front();
+//        q2.pop();
+//
+//        if (!n1) {
+//            if (n2) return false;
+//        }
+//        if (!n2) return false;
+//
+//        if (n1 && n2) {
+//
+//        }
+//
+//        if (!((*q1.front())->data == (*q2.front())->data))
+//            return false;
+//
+//        if ((*q.front())->left)
+//            q.push(&(*q.front())->left);
+//        if ((*q.front())->right)
+//            q.push(&(*q.front())->right);
+//        q.pop();
+//    }
+//}
