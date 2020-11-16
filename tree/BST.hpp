@@ -53,9 +53,11 @@ public:
         LEAF_NODE, ONE_CHILD, TWO_CHILDREN
     } delete_mode;
 
-    BST<Data_T> operator=(const BST<Data_T> &tree) {
+    BST<Data_T> &operator=(const BST<Data_T> &tree) {
         this->clear();
-        return BST<Data_T>(tree);
+        this->updateIfExists = tree.updateIfExists;
+        cloneFrom(&tree);
+        return *this;
     }
 
     bool operator==(const BST<Data_T> &tree) {
@@ -84,16 +86,16 @@ public:
         return it1.hasNext() || it2.hasNext();
     }
 
-    bool operator<(const BST<Data_T> &tree) {
-        Iterator it1(this->begin()), it2(tree.begin());
-        while (it1.hasNext() && it2.hasNext()) {
-            if (!(it1.next() < it2.next())) return false;
-        }
-        return it2.hasNext();
-    }
+//    bool operator<(const BST<Data_T> &tree) {
+//        Iterator it1(this->begin()), it2(tree.begin());
+//        while (it1.hasNext() && it2.hasNext()) {
+//            if (!(it1.next().dataLt(it2.next()))) return false;
+//        }
+//        return it2.hasNext();
+//    }
 
 protected:
-    const bool updateIfExists;
+    bool updateIfExists;
     std::function<Data_T()> default_init;
 
     /***** Node class *****/
@@ -309,7 +311,7 @@ template<typename Data_T>
             locptr = locptr->left;
         else if (locptr->getData() < item)  // descend right
             locptr = locptr->right;
-        else if (locptr->getData() == item) // item found
+        else // if (locptr->getData() == item) // item found
             return &(locptr->getData());
     }
     return nullptr;
@@ -454,7 +456,8 @@ BST<Data_T>::searchNode(BST<Data_T>::BinNode *startNode, const Data_T &data, BST
 
 template<typename Data_T>
 typename BST<Data_T>::BinNode *
-BST<Data_T>::searchNode(const BST<Data_T>::BinNode *searchFrom, const Data_T &data, BST<Data_T>::BinNode *&parentNode) const {
+BST<Data_T>::searchNode(const BST<Data_T>::BinNode *searchFrom, const Data_T &data,
+                        BST<Data_T>::BinNode *&parentNode) const {
 //    if (startNode == NULL || startNode == 0) return nullptr;
     BinNode *startNode = searchFrom;
     parentNode = nullptr;

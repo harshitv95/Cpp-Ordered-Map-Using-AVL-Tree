@@ -8,8 +8,28 @@
 #include "tree/AVL.hpp"
 
 #include <functional>
+#include <experimental/type_traits>
+
+using std::experimental::is_detected;
 
 namespace cs540 {
+
+    template<typename T>
+    using less_than_t = decltype(std::declval<T>() < std::declval<T>());
+
+    template<typename T>
+    using has_less_than = typename is_detected<less_than_t, T>::type;
+
+    template<typename T>
+    bool do_compare(const T &lhs, const T &rhs, std::true_type) // for operator <
+    {
+        return lhs < rhs;
+    }
+
+    template<typename T>
+    bool do_compare(const T &lhs, const T &rhs, std::false_type) {
+        return false;
+    }
 
     template<typename Key_T, typename Mapped_T>
     class Map {
@@ -20,9 +40,9 @@ namespace cs540 {
         public:
             MapDataNode(const Key_T key, Mapped_T mappedItem) : ValueType({key, mappedItem}) {}
 
-            MapDataNode(const std::pair<const Key_T, Mapped_T> &p) : MapDataNode(p.first, p.second) {}
+            MapDataNode(const ValueType &p) : MapDataNode(p.first, p.second) {}
 
-            MapDataNode(std::initializer_list <Mapped_T> list) : MapDataNode(list.begin(), list.begin() + 1) {}
+//            MapDataNode(std::initializer_list <Mapped_T> list) : MapDataNode(list.begin(), list.begin() + 1) {}
 
             const Key_T &getKey() {
                 return this->first;
@@ -41,16 +61,18 @@ namespace cs540 {
 //            }
 
             bool operator<(const MapDataNode &node) const {
-                return this->first < node.first || (this->first == node.first && this->second < node.second);
-//            return (this->first < node.first && this->second <= node.second) ||
-//                   (this->first <= node.first && this->second < node.second);
+                return this->first < node.first; // || (this->first == node.first && this->second < node.second);
             }
 
             bool operator==(const MapDataNode &node) const {
                 return this->first == node.first && this->second == node.second;
             }
 
-            MapDataNode operator=(const MapDataNode &other) {
+            MapDataNode operator=(const MapDataNode &other) const {
+                return MapDataNode(other);
+            }
+
+            MapDataNode operator=(const ValueType &other) const {
                 return MapDataNode(other);
             }
         };
@@ -202,9 +224,11 @@ namespace cs540 {
             this->clear();
         }
 
-        Map<Key_T, Mapped_T> operator=(const Map<Key_T, Mapped_T> &other) {
+        Map<Key_T, Mapped_T> &operator=(const Map<Key_T, Mapped_T> &other) {
             this->clear();
-            return Map<Key_T, Mapped_T>(other);
+            this->tree = other.tree;
+            return *this;
+//            return Map<Key_T, Mapped_T>(other);
         }
 
         // -- size:
@@ -228,7 +252,7 @@ namespace cs540 {
             return Iterator(tree);
         }
 
-        Iterator begin(const MapDataNode &node) {
+        Iterator begin(const typename Map<Key_T, Mapped_T>::MapDataNode &node) {
             return Iterator(tree, node);
         }
 
@@ -240,7 +264,7 @@ namespace cs540 {
             return ConstIterator(tree);
         }
 
-        ConstIterator begin(MapDataNode &node) const {
+        ConstIterator begin(const MapDataNode &node) const {
             return ConstIterator(tree, node);
         }
 
@@ -264,8 +288,6 @@ namespace cs540 {
 
         void erase(const Key_T &);
 
-//        void erase(const Iterator &&);
-
         void erase(Iterator);
 
         void clear();
@@ -280,7 +302,24 @@ namespace cs540 {
         }
 
         bool operator<(const Map<Key_T, Mapped_T> &other) {
-            return this->tree < other.tree;
+            typename AVL<MapDataNode>::Iterator it1(this->tree.begin()), it2(other.tree.begin());
+            bool lt;
+            while (it1.hasNext() && it2.hasNext()) {
+                lt = (
+                        it1.get().first < it2.get().first ||
+                        (
+                                it1.get().first == it2.get().first &&
+                                do_compare(
+                                        it1.get().second, it2.get().second, has_less_than<Mapped_T>{}
+                                )
+                        )
+                );
+                if (!lt) return false;
+
+                it1.next();
+                it2.next();
+            }
+            return it2.hasNext();
         }
 
     protected:
@@ -305,7 +344,7 @@ namespace cs540 {
     template<typename Key_T, typename Mapped_T>
     typename Map<Key_T, Mapped_T>::MapDataNode *
     Map<Key_T, Mapped_T>::get_data_node(const typename Map<Key_T, Mapped_T>::MapDataNode &node) const {
-        return tree.search(node);
+        return get_data_node(node.first);
     }
 
 // - public:
@@ -377,8 +416,8 @@ namespace cs540 {
     template<typename IT_T>
     void Map<Key_T, Mapped_T>::insert(IT_T range_beg, IT_T range_end) {
         while (range_beg != range_end) {
-            tree.insert(MapDataNode(*range_beg));
-            range_beg++;
+            this->insert(MapDataNode(*range_beg));
+            ++range_beg;
         }
     }
 
@@ -413,5 +452,15 @@ namespace cs540 {
                MapDataNode &data) {
                 return key < data ? -1 : key == data ? 0 : 1;
             };
+
+
+/********** MapDataNode ************/
+// non-members:
+// -- operators:
+//    template<typename K, typename M>
+//    bool operator<(const typename Map<K, M>::MapDataNode &node1, const typename Map<K, M>::MapDataNode &node2) {
+//        return node1->first < node2.first || (node1->first == node2.first && node1->second < node2.second);
+//    }
+
 
 }
