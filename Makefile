@@ -6,7 +6,7 @@ CC = g++
 CFLAGS = -Wl,--no-as-needed -ldl -Wno-unused-parameter -Wall -Wextra -pedantic -g
     #
     #      # the build target executable:
-TARGET = test1
+TARGET = test
 
 all: $(TARGET)
 

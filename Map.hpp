@@ -5,7 +5,7 @@
 #ifndef AVL_TREE_MAP
 #define AVL_TREE_MAP
 
-#include "../tree/AVL.hpp"
+#include "tree/AVL.hpp"
 
 #include <functional>
 
