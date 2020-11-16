@@ -657,17 +657,17 @@ void BST<Data_T>::BinNode::cloneFrom(const BinNode *node) {
 template<typename Data_T>
 void BST<Data_T>::BinNode::deleteSubTree(BinNode *&node) {
     if (!node) return;
-    std::queue < BinNode * * > q;
-    q.push(&node);
+    std::queue < BinNode * > q;
+    q.push(node);
     while (!q.empty()) {
-        if ((*q.front())->left)
-            q.push(&(*q.front())->left);
-        if ((*q.front())->right)
-            q.push(&(*q.front())->right);
-        delete *(q.front());
-        *(q.front()) = nullptr;
+        if ((q.front())->left)
+            q.push(q.front()->left);
+        if ((q.front())->right)
+            q.push(q.front()->right);
+        delete (q.front());
         q.pop();
     }
+    node = nullptr;
 }
 
 //template<typename Data_T>
