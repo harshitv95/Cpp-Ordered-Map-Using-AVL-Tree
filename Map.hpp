@@ -102,8 +102,6 @@ namespace cs540 {
             bool operator==(const typename Map<Key_T, Mapped_T>::MapDataNode &node) const {
                 return key == node.first;
             }
-
-            const static std::function<short int(const MapKeyNode &, MapDataNode &)> key_data_comp;
         };
 
         class Iterator {
@@ -322,6 +320,16 @@ namespace cs540 {
             return it2.hasNext();
         }
 
+        const std::function<short int(const MapKeyNode &, MapDataNode &)> key_data_comp_val =
+                [](const MapKeyNode &key,
+                   MapDataNode &data) {
+                    return key < data ? -1 : key == data ? 0 : 1;
+                };
+
+//        const static std::function<short int(const MapKeyNode &, MapDataNode &)> &key_data_comp() {
+//            return key_data_comp_val;
+//        }
+
     protected:
         AVL<MapDataNode> tree;
 
@@ -338,7 +346,7 @@ namespace cs540 {
 // -- element access
     template<typename Key_T, typename Mapped_T>
     typename Map<Key_T, Mapped_T>::MapDataNode *Map<Key_T, Mapped_T>::get_data_node(const Key_T &key) const {
-        return tree.search(MapKeyNode(key), MapKeyNode::key_data_comp);
+        return tree.search(MapKeyNode(key), key_data_comp_val);
     }
 
     template<typename Key_T, typename Mapped_T>
@@ -363,7 +371,7 @@ namespace cs540 {
     template<typename Key_T, typename Mapped_T>
     Mapped_T &Map<Key_T, Mapped_T>::operator[](const Key_T &key) {
         MapKeyNode keyNode(key);
-        MapDataNode *dataNodePtr = tree.search(keyNode, MapKeyNode::key_data_comp);
+        MapDataNode *dataNodePtr = tree.search(keyNode, key_data_comp_val);
         if (!dataNodePtr) {
             MapDataNode dataNode(key, Mapped_T());
             tree.insert(dataNode);
@@ -423,7 +431,7 @@ namespace cs540 {
 
     template<typename Key_T, typename Mapped_T>
     void Map<Key_T, Mapped_T>::erase(const Key_T &key) {
-        tree.deleteNode(MapKeyNode(key), MapKeyNode::key_data_comp);
+        tree.deleteNode(MapKeyNode(key), key_data_comp_val);
     }
 
 //    template<typename Key_T, typename Mapped_T>
@@ -444,14 +452,14 @@ namespace cs540 {
 /*********** MapKeyNode ************/
 // public:
 // -- static members:
-    template<typename K, typename M>
-    const std::function<short int(
-            const typename Map<K, M>::MapKeyNode &, typename Map<K, M>::MapDataNode &
-    )> Map<K, M>::MapKeyNode::key_data_comp =
-            [](const MapKeyNode &key,
-               MapDataNode &data) {
-                return key < data ? -1 : key == data ? 0 : 1;
-            };
+//    template<typename K, typename M>
+//    const std::function<short int(
+//            const typename Map<K, M>::MapKeyNode &, typename Map<K, M>::MapDataNode &
+//    )> Map<K, M>::key_data_comp_val =
+//            [](const MapKeyNode &key,
+//               MapDataNode &data) {
+//                return key < data ? -1 : key == data ? 0 : 1;
+//            };
 
 
 /********** MapDataNode ************/
